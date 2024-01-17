@@ -154,6 +154,7 @@ def process_metadata():
             - 'source_image': Original image name.
             - 'source_camera': Webcam identifier.
             - 'source_position': Camera angle identifier.
+            - 'source_view': Camera location and angle combination.
             - 'source_date': Date of image capture.
             - 'source_time': Time of image capture.
             - 'x_WGS84': WGS84 Cartesian X coordinate of the sampled central pixel.
@@ -183,6 +184,7 @@ def process_metadata():
         img_metadata["source_image"] = img_name
         img_metadata["source_camera"] = img_name[:4]
         img_metadata["source_position"] = img_name[5]
+        img_metadata["source_view"] = img_name[:6]
         img_metadata["source_date"] = img_name[7:-5]
         img_metadata["source_time"] = img_name[-4:]
         img_metadata["x_WGS84"] = WGS84_coords[0]
@@ -264,12 +266,6 @@ def process_data(metadata):
 def main():
     """
     Creates the dataset
-    
-    Args:
-        None
-        
-    Returns:
-        None
     """
 
     check_paths()
