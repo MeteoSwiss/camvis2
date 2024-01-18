@@ -167,3 +167,4 @@ outputs/checkpoints/*
 outputs/training_logs/*
 outputs/val_images/*
 outputs/val_scores/*
+outputs/val_cf_matrices/*
