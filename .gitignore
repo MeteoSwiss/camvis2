@@ -163,3 +163,7 @@ cython_debug/
 data/processed/*
 data/raw/depth_maps/*
 data/raw/images/*
+outputs/checkpoints/*
+outputs/training_logs/*
+outputs/val_images/*
+outputs/val_scores/*
