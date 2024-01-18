@@ -20,6 +20,7 @@ class MultiMagnificationPatches():
     PyTorch dataset class for Multi-Magnification Patches.
 
     Args:
+        random_seed (int): random seed for the positive resampling.
         val_view (str): View for the validation split.
         test_view (str): View for the test split.
 
@@ -50,8 +51,8 @@ class MultiMagnificationPatches():
         >>> sample = multi_magnification_dataset[0]
     """
 
-    def __init__(self, val_view=None, test_view=None):
-        self.state = RANDOM_SEED
+    def __init__(self, random_seed=RANDOM_SEED, val_view=None, test_view=None):
+        self.state = random_seed
         self.patch_size = PATCH_SIZE
         self.factors = DEMAGNIFICATION_FACTORS
 
