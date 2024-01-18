@@ -1,18 +1,27 @@
+
 import os
 import random
 from time import time
 
+import cv2
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from matplotlib.colors import LinearSegmentedColormap
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torcheval.metrics.functional import (multiclass_accuracy, multiclass_f1_score)
-from tqdm import trange
+from tqdm import tqdm, trange
 
 from dataset import MultiMagnificationPatches
 from model import MultiMagnificationNet
+
+plt.switch_backend('agg')
 
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
@@ -339,5 +348,232 @@ class Experiment():
 
         exit()
 
+    def bootstrap_infer(self, dataloader, num_iterations = 10, num_samples = False, random_state = False, cf_mat=True):
+        """Perform inference with bootstrapping for a more interpretable evaluation of the performance"""
+
+        # Initialize variables to store performances
+        concat_loss = torch.zeros(num_iterations)
+        concat_acc = torch.zeros(num_iterations)
+        concat_f1 = torch.zeros(num_iterations)
+        
+        # Get initial random state and all predictions and targets
+        if not random_state:
+            random_state = 42
+        _, _, _, preds, targets = self.infer_round(dataloader)
+
+        if cf_mat:
+            self.make_cf_mat(preds, targets)
+            num_bins = 5
+            quantiles = [i/num_bins for i in range(num_bins+1)]
+            values = self.dataset.metadata["depth"].quantile(quantiles, interpolation="higher").tolist()
+            depths = torch.tensor(self.dataset.split_metadata["depth"].tolist())
+            df = pd.DataFrame(columns=["bin","count","rate","tfpn"])
+            tfpns = ["TN", "FP", "FN", "TP"]
+            bin = 0
+            dist_ranges = []
+            for i, j in zip(values[:-1], values[1:]):
+                bin += 1
+                dist_ranges.append(f"{int(i)}-{int(j)}")
+                sub_preds = preds[(depths>=i) & (depths<j)]
+                sub_targets = targets[(depths>=i) & (depths<j)]
+                mat_name = self.cfg.RUN_NAME + f"_{int(i)}-{int(j)}"
+                counts = self.make_cf_mat(sub_preds, sub_targets, mat_name)
+                rates = counts/counts.sum()
+                for tfpn in tfpns:
+                    df.loc[len(df)] = [bin, counts[tfpns.index(tfpn)], rates[tfpns.index(tfpn)], tfpn]
+            
+            sub_df = df.pivot(index="bin",columns="tfpn",values="rate").dropna()
+            #sns.set_theme()
+            ax = sub_df.plot.area(colormap = cm.get_cmap('Set3', len(sub_df.columns)), grid=True)
+            ax.set_xticks([i+1 for i in range(len(dist_ranges))])
+            ax.set_xticklabels(dist_ranges)
+            plt.title("Evolution of TN, FP, FN and TP rates across bins")
+            plt.tight_layout()
+            plt.savefig(self.cfg.INFERENCE_PATH + "lineplots/" + self.cfg.RUN_NAME + "_tfpn.png")
+            plt.close()
+
+            df["tf"] = df["tfpn"].apply(lambda x : x[0])
+            sub_df = df.groupby(["bin","tf"])["rate"].sum().reset_index()
+            sub_df = sub_df.pivot(index="bin",columns="tf",values="rate").dropna()
+            #sns.set_theme()
+            ax = sub_df.plot.area(colormap = cm.get_cmap('Set3', len(sub_df.columns)), grid=True)
+            ax.set_xticks([i+1 for i in range(len(dist_ranges))])
+            ax.set_xticklabels(dist_ranges)
+            plt.title("Evolution of True / False predictions across bins")
+            plt.tight_layout()
+            plt.savefig(self.cfg.INFERENCE_PATH + "lineplots/" + self.cfg.RUN_NAME + "_tf.png")
+            plt.close()
+
+            df["pn"] = df["tfpn"].apply(lambda x : x[1])
+            sub_df = df.groupby(["bin","pn"])["rate"].sum().reset_index()
+            sub_df = sub_df.pivot(index="bin",columns="pn",values="rate").dropna()
+            #sns.set_theme()
+            ax = sub_df.plot.area(colormap = cm.get_cmap('Set3', len(sub_df.columns)), grid=True)
+            ax.set_xticks([i+1 for i in range(len(dist_ranges))])
+            ax.set_xticklabels(dist_ranges)
+            plt.title("Evolution of Positive / Negative predictions across bins")
+            plt.tight_layout()
+            plt.savefig(self.cfg.INFERENCE_PATH + "lineplots/" + self.cfg.RUN_NAME + "_pn.png")
+            plt.close()
+
+
+        # Set random numbers generator and use a large seed number
+        generator = torch.Generator()
+        generator.manual_seed(random_state**5)
+
+
+        # If nothing specified, sample the same amount of elements as the set size
+        if not num_samples:
+            num_samples = len(preds)
+
+        for i in range(num_iterations):
+            idx = torch.multinomial(input = torch.ones(len(preds)).float(), num_samples=num_samples, replacement=True, generator=generator)
+
+            concat_loss[i] = self.criterion(preds[idx],targets[idx])
+            round_preds = preds[idx].round().to(dtype=torch.int64)
+            round_targets = targets[idx].round().to(dtype=torch.int64)
+            concat_acc[i] = multiclass_accuracy(round_preds, round_targets, average="macro", num_classes=2)
+            concat_f1[i] = multiclass_f1_score(round_preds, round_targets, average="macro", num_classes=2)
+
+        return concat_loss, concat_acc, concat_f1
+
+    def make_cf_mat(self, preds, targets, name=None):
+        """Building of confusion matrix and saving as an image"""
+        cf_mat = confusion_matrix(targets.round().int(), preds.round().int(), labels=[0,1])
+        disp = ConfusionMatrixDisplay(confusion_matrix=cf_mat, display_labels=["nonvisible:0","visible:1"])
+        disp.plot()
+        plt.tight_layout()
+        if name:
+            plt.savefig(self.cfg.INFERENCE_PATH + "cf_mats/" + name + ".png")
+        else:
+            plt.savefig(self.cfg.INFERENCE_PATH + "cf_mats/" + self.cfg.RUN_NAME + ".png")
+        plt.close()
+        return cf_mat.flatten()
+
     def eval(self):
-        pass
+        """Evaluation of inference"""
+        
+        # Infer on images
+        self.dataset.val()
+        self.infer_on_images()
+        
+        # Validate
+        self.dataset.val()
+        infer_dataloader = DataLoader(self.dataset, shuffle=False, batch_size=self.cfg.BATCH_SIZE, num_workers=self.cfg.NUM_WORKERS, 
+                                           pin_memory=False, prefetch_factor=2, persistent_workers=False)
+        
+        # Bootstrap phase
+        loss, acc, f1 = self.bootstrap_infer(infer_dataloader)
+        self.infer_dataloader = None
+        
+        
+        with open(self.cfg.INFERENCE_PATH + "scores.csv", "a") as logs_file:
+            for i in range(len(loss)):
+                logs_file.write(f"\n{self.cfg.RUN_NAME},{self.cfg.VIEW},val,{loss[i].item():.4f},{acc[i].item():.4f},{f1[i].item():.4f}")
+        
+        
+        exit()
+
+    
+    def infer_on_images(self):
+        """Perform inferenc on the images of the current dataset subset and save them"""
+
+        # Check if directory exists for this run, if not, make one
+        if not os.path.exists(self.cfg.INFERENCE_PATH + f"test_images/{self.cfg.RUN_NAME}"):
+            os.makedirs(self.cfg.INFERENCE_PATH + f"test_images/{self.cfg.RUN_NAME}")
+        if not os.path.exists(self.cfg.INFERENCE_PATH + f"histplots/{self.cfg.RUN_NAME}"):
+            os.makedirs(self.cfg.INFERENCE_PATH + f"histplots/{self.cfg.RUN_NAME}")
+
+        # Colormap for plotting
+        cmap = LinearSegmentedColormap.from_list("", ["fuchsia", "yellow", "lightgreen"])
+
+        # Bins for hist plots
+        #xbins = np.log10(np.exp(((np.log(100000)-np.log(5))*np.linspace(0, 255, 51)/255)+np.log(5)))
+        xbins = np.log10(100000)*np.linspace(0, 100, 51)/100
+        ybins = np.linspace(0,1,11)
+
+        # Get split data and source image names
+        df = self.dataset.split_metadata.copy()
+        names = df["source_image"].unique().tolist()
+        df["distance"] = df["depth"]
+
+        # Set model to evaluation mode
+        self.net.eval()
+
+        # Dataframe to save inference data on all images
+        all_inference_data = pd.read_csv(self.cfg.INFERENCE_PATH + f"all_points.csv")
+
+        # Process source images
+        for image_name in tqdm(names):
+
+            # Get source image
+            picture = cv2.imread(self.cfg.DATASET_PATH.rsplit("/",2)[0] + f"/2024-01-11_all_images/{image_name}.jp2")[:,:,::-1].copy()
+                
+            # Get corresponding patches and labels
+            subdf = df.loc[df["source_image"] == image_name]
+            h = [int(x) for x in subdf["h_coord"].tolist()]
+            w = [int(x) for x in subdf["w_coord"].tolist()]
+            label = subdf["label"].tolist()
+
+            # Plot source image with patches and ground truth and save it
+            plt.imshow(picture)
+            plt.scatter(w, h, c = label, s = 5, cmap = cmap, alpha = 0.8, vmin=0, vmax=1)
+            plt.savefig(self.cfg.INFERENCE_PATH + f"test_images/{self.cfg.RUN_NAME}/{image_name}_true.png")
+            plt.close()
+
+            # Gather inputs
+            self.dataset.split_metadata = subdf
+            dataloader = DataLoader(self.dataset, shuffle=False, batch_size = len(subdf), num_workers=self.cfg.NUM_WORKERS)
+            inputs, _, _ = next(iter(dataloader))
+
+            # Put to CUDA and infer
+            inputs = inputs.to(device=self.cfg.DEVICE)
+
+            with torch.no_grad():
+                scores = self.net(inputs)
+                scores = F.sigmoid(scores)
+            scores = scores.cpu().squeeze().tolist()
+            subdf["pred"] = scores
+
+            # Plot source image with patches and predicted labels and save it
+            plt.imshow(picture)
+            plt.scatter(w, h, c = scores, s = 5, cmap = cmap, alpha = 0.8, vmin=0, vmax=1)
+            plt.savefig(self.cfg.INFERENCE_PATH + f"test_images/{self.cfg.RUN_NAME}/{image_name}_pred.png")
+            plt.close()
+
+            # Make histplot for prevailing visibility estimation
+            plt.figure(figsize=(6,4))
+            sns.set(style="ticks")
+            g = sns.JointGrid(data=subdf, x="distance", y="pred", marginal_ticks=True)
+            g.ax_joint.set(xscale="log")
+            g.ax_joint.set(ylim=[0,1])
+            g.ax_joint.set(xlim=[1,100000])
+            g.ax_joint.set(ylabel="Estimated Visibility")
+            g.ax_joint.set(xlabel="Distance [m]")
+            g.ax_joint.set(xticklabels=["","1","10","100","1'000","10'000","100'000",""])
+            g.ax_joint.xaxis.grid(visible=True, which="both")
+            g.ax_joint.yaxis.grid(visible=True, which="major")
+            cax = g.figure.add_axes([0.15, .15, 0.02, .2])
+
+            # Add the joint and marginal histogram plots
+            g.plot_joint(
+                sns.histplot, discrete=(False, False),
+                cmap="light:#4A235A", pmax=.8, cbar=True, cbar_ax=cax, bins=(xbins,ybins)#binwidth=(0.1,0.05) #cmap="light:#03012d"
+            )
+            sns.histplot(data=subdf, x="distance", color="#4A235A", bins=xbins, ax=g.ax_marg_x) #element="step", legend=False
+            #g.ax_marg_x.set(ylabel=None)
+            sns.histplot(data=subdf, y="pred", color="#4A235A", bins=ybins, ax=g.ax_marg_y)
+            #g.plot_marginals(sns.histplot, color="#4A235A", element="step", )
+
+            g.fig.set_figwidth(12)
+            g.fig.set_figheight(8)
+            
+            plt.tight_layout()
+            plt.show()
+            plt.savefig(self.cfg.INFERENCE_PATH + f"histplots/{self.cfg.RUN_NAME}/{image_name}.png")
+            g = None
+            plt.close()
+
+            all_inference_data = pd.concat([all_inference_data, subdf])
+            
+        all_inference_data.to_csv(self.cfg.INFERENCE_PATH + f"all_points.csv", index=False)

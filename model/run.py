@@ -9,7 +9,7 @@ warnings.filterwarnings("ignore")
 
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 DEPTHS_PATH = f"{DIR_PATH}/../data/raw/depth_maps"
-VIEWS = [view.split(".npy")[0] for view in os.listdir(DEPTHS_PATH) if view.endswith(".npy")]
+VIEWS = sorted([view.split(".npy")[0] for view in os.listdir(DEPTHS_PATH) if view.endswith(".npy")])
 
 def parse_args():
     """
@@ -20,6 +20,10 @@ def parse_args():
     parser.add_argument("--ALIGN_FEATURES", dest="ALIGN_FEATURES",
                        action="store_true", 
                        help={"If used, allows to encode levels so that features present on the resized images are physically aligned"})
+    
+    parser.add_argument("--AMP", dest="AMP",
+                       action="store_true", 
+                       help={"If used, enables automatic mixed precision for a faster and lighter computation"})
     
     parser.add_argument("--BATCH_SIZE", dest="BATCH_SIZE",
                       help="{Mini-batch size to feed to the model, prefferably a power of 2 up to 32}",
@@ -53,9 +57,28 @@ def parse_args():
                       default = 100,
                       type=int)
     
+    parser.add_argument("--EVAL_GROUP", dest="EVAL_GROUP",
+                      help="{Custom value to group this run with others in the evaluation logs}",
+                      type=str, default=False, nargs="?")
+    
+    parser.add_argument("--EVAL_HIST_PATH", dest="EVAL_HIST_PATH",
+                      help="{Path to the histplots obtained at evaluation time}",
+                      default = f"{DIR_PATH}/../outputs/val_histplots",
+                      type=str)
+    
     parser.add_argument("--EVAL_IMG_PATH", dest="EVAL_IMG_PATH",
                       help="{Path to the images with evaluated visibility}",
                       default = f"{DIR_PATH}/../outputs/val_images",
+                      type=str)
+    
+    parser.add_argument("--EVAL_MAT_PATH", dest="EVAL_MAT_PATH",
+                      help="{Path to the confusion matrices obtained at evaluation time}",
+                      default = f"{DIR_PATH}/../outputs/val_cf_matrices",
+                      type=str)
+    
+    parser.add_argument("--EVAL_SCORES_FNAME", dest="EVAL_SCORES_FNAME",
+                      help="{Path to the logs of evaluation of patches}",
+                      default = f"eval_scores",
                       type=str)
     
     parser.add_argument("--EVAL_SCORES_PATH", dest="EVAL_SCORES_PATH",
@@ -83,14 +106,6 @@ def parse_args():
     parser.add_argument("--LOAD_CHECKPOINT", dest="LOAD_CHECKPOINT",
                       help="{When used, allows to load the pretrained checkpoint that matches the run name}",
                       action="store_true")
-    
-    parser.add_argument("--LOGS", dest="LOGS",
-                      action="store_true", help={"Whether or not to use tensorboard logging"})
-    
-    parser.add_argument("--LOGS_PATH", dest="LOGS_PATH",
-                      help="{Path to the logs}",
-                      default = f"{DIR_PATH}/../outputs/training_logs",
-                      type=str)
     
     parser.add_argument("--MIN_LEARNING_RATE", dest="MIN_LEARNING_RATE",
                       help="{Minimal learning rate for the scheduler (script stops when the learning rate is below this limit)}",
@@ -134,6 +149,14 @@ def parse_args():
                        action="store_true", 
                        help={"If used, sacrifices train-time metrics evaluation on the train set to decrease epoch durations"})
     
+    parser.add_argument("--TRAIN_LOGS", dest="TRAIN_LOGS",
+                      action="store_true", help={"Whether or not to use tensorboard logging"})
+    
+    parser.add_argument("--TRAIN_LOGS_PATH", dest="TRAIN_LOGS_PATH",
+                      help="{Path to the logs}",
+                      default = f"{DIR_PATH}/../outputs/training_logs",
+                      type=str)
+    
     parser.add_argument("--USE_MLP", dest="USE_MLP",
                        action="store_true", 
                        help={"If used, allows to use an MLP instead of a linear layer at the tail of the model"})
@@ -146,10 +169,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-if __name__ == "__main__":
-    # Configuration
-    cfg = parse_args()
-
+def do_checks(cfg):
     #Checks before run
     if cfg.ALIGN_FEATURES & (not any([[2, 4, 8, 16, 32][i:i+len(cfg.FACTORS)] == cfg.FACTORS for i in range(6-len(cfg.FACTORS))])):
         raise Exception("ALIGN_FEATURES is not suitable since FACTORS is not a sequence of powers of 2 with a step of +1 in exponent")
@@ -164,11 +184,28 @@ if __name__ == "__main__":
         cfg.DEVICE = "cpu"
         print("No GPU found, using CPU")
 
+    if not cfg.RUN_NAME:
+        subdirectories = [d for d in os.listdir(cfg.TRAIN_LOGS_PATH) if os.path.isdir(os.path.join(cfg.TRAIN_LOGS_PATH, d))]
+        cfg.run_name = f"run_{len(subdirectories)}"
+
+    if cfg.RUN_MODE != "train":
+
+        if not os.path.exists(f"{cfg.EVAL_SCORES_PATH}/{cfg.EVAL_SCORES_FNAME},csv"):
+            pass
+
+    return cfg
+
+if __name__ == "__main__":
+    # Configuration
+    cfg = parse_args()
+    cfg = do_checks(cfg)
+    
+
     # Run
     if cfg.RUN_MODE == "train":
         experiment = Experiment(cfg)
         experiment.train()
-    elif cfg.RUN_MODE == "test":
+    elif cfg.RUN_MODE == "eval":
         experiment = Experiment(cfg)
         experiment.eval()
     elif cfg.RUN_MODE == "both":
