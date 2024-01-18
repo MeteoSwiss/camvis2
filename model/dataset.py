@@ -6,20 +6,15 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 # Constants
-RANDOM_SEED = 42
-torch.manual_seed(RANDOM_SEED)
-
 PATCH_SIZE = 128
-DEMAGNIFICATION_FACTORS = (2, 4, 8, 16, 32)
-
-DIR_PATH = os.path.dirname(os.path.realpath(__file__))
-DATASET_PATH = f"{DIR_PATH}/../data/processed"
 
 class MultiMagnificationPatches():
     """
     PyTorch dataset class for Multi-Magnification Patches.
 
     Args:
+        dataset_path (str): path to the folder containing preprocessed data and metadata
+        demagnification_factors (list): factors of demagnification of input data to be used 
         random_seed (int): random seed for the positive resampling.
         val_view (str): View for the validation split.
         test_view (str): View for the test split.
@@ -51,20 +46,21 @@ class MultiMagnificationPatches():
         >>> sample = multi_magnification_dataset[0]
     """
 
-    def __init__(self, random_seed=RANDOM_SEED, val_view=None, test_view=None):
+    def __init__(self, dataset_path, demagnification_factors, random_seed, val_view=None, test_view=None):
+        self.dataset_path = dataset_path
+        self.factors = demagnification_factors
         self.state = random_seed
         self.patch_size = PATCH_SIZE
-        self.factors = DEMAGNIFICATION_FACTORS
 
         # Load metadata
-        self.metadata = pd.read_csv(f"{DATASET_PATH}/metadata.csv")
+        self.metadata = pd.read_csv(f"{self.dataset_path}/metadata.csv")
 
         # Load data
         self.data = {}
         self.data["mean"] = torch.empty(0)
         self.data["std"] = torch.empty(0)
         for f in self.factors:
-            self.data[f"images_x{f}"], self.data[f"depths_x{f}"] =  torch.load(f"{DATASET_PATH}/data_demagnified_x{f}.pt")
+            self.data[f"images_x{f}"], self.data[f"depths_x{f}"] =  torch.load(f"{self.dataset_path}/data_demagnified_x{f}.pt")
             self.data[f"images_x{f}"] /= 255
             self.data["mean"] = torch.cat([self.data["mean"], self.data[f"images_x{f}"].mean(dim=(0,2,3))])
             self.data["mean"] = torch.cat([self.data["mean"], self.data[f"depths_x{f}"].mean(dim=(0,2,3))])
@@ -161,7 +157,12 @@ def main():
     """
     Loads data and provides an example of a typical batch of data
     """
-    dataset = MultiMagnificationPatches(val_view="1148_1", test_view="1206_4")
+    dataset = MultiMagnificationPatches(
+        dataset_path=f"{os.path.dirname(os.path.realpath(__file__))}/../data/processed",
+        demagnification_factors=[2,4,8,16,32],
+        random_seed=42,
+        val_view="1148_1", 
+        test_view="1206_4")
     loader = DataLoader(dataset, shuffle=False, batch_size = 8, num_workers=1)
     batch = next(iter(loader))
 

@@ -9,7 +9,7 @@ warnings.filterwarnings("ignore")
 
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 DEPTHS_PATH = f"{DIR_PATH}/../data/raw/depth_maps"
-VIEWS = [view.split(".npy") for view in os.listdir(DEPTHS_PATH) if view.endswith(".npy")]
+VIEWS = [view.split(".npy")[0] for view in os.listdir(DEPTHS_PATH) if view.endswith(".npy")]
 
 def parse_args():
     """
@@ -154,8 +154,10 @@ if __name__ == "__main__":
     if cfg.ALIGN_FEATURES & (not any([[2, 4, 8, 16, 32][i:i+len(cfg.FACTORS)] == cfg.FACTORS for i in range(6-len(cfg.FACTORS))])):
         raise Exception("ALIGN_FEATURES is not suitable since FACTORS is not a sequence of powers of 2 with a step of +1 in exponent")
 
-    if cfg.VAL_FOLD < 2 or cfg.VAL_FOLD > len(VIEWS):
-        raise Exception(f"Available data only allows for k-fold cross validation with k between 2 and {len(VIEWS)}")
+    if cfg.VAL_FOLD < 1 or cfg.VAL_FOLD > len(VIEWS):
+        raise Exception(f"Available data only allows for k-fold cross validation with k between 1 and {len(VIEWS)}")
+    
+    cfg.VAL_VIEW = VIEWS[cfg.VAL_FOLD-1]
 
     # Use CPU if no GPU is available
     if not torch.cuda.is_available():
