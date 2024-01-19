@@ -105,10 +105,14 @@ def parse_args():
                       help="{Minimal learning rate for the scheduler (script stops when the learning rate is below this limit)}",
                       default = 1e-5,
                       type=float)
+    
+    parser.add_argument("--MODEL_NAME", dest="MODEL_NAME",
+                      help="{When used, allows to specify the name of the model for the log files and checkpoints}",
+                      type=str, default=False, nargs="?")
 
     parser.add_argument("--NUM_EPOCHS", dest="NUM_EPOCHS",
                       help="{Number of training epochs, -1 for infinite (scheduler ends the training)}",
-                      default = 100,
+                      default = 10,
                       type=int)
     
     parser.add_argument("--NUM_WORKERS", dest="NUM_WORKERS",
@@ -131,10 +135,6 @@ def parse_args():
                       help="{train a model, evaluate a model, or do train and directly evaluate a model}",
                       default = "train",
                       type=str)
-    
-    parser.add_argument("--RUN_NAME", dest="RUN_NAME",
-                      help="{When used, allows to specify the name of the run for the log files}",
-                      type=str, default=False, nargs="?")
     
     parser.add_argument("--SAVE_CHECKPOINTS", dest="SAVE_CHECKPOINTS",
                        action="store_true", help={"Whether or not to save trained checkpoints"})
@@ -188,16 +188,16 @@ def do_checks(cfg):
         cfg.DEVICE = "cpu"
         print("No GPU found, using CPU")
 
-    if not cfg.RUN_NAME:
+    if not cfg.MODEL_NAME:
         subdirectories = [d for d in os.listdir(cfg.TRAIN_LOGS_PATH) if os.path.isdir(os.path.join(cfg.TRAIN_LOGS_PATH, d))]
-        cfg.RUN_NAME = f"run_{len(subdirectories)}"
+        cfg.MODEL_NAME = f"run_{len(subdirectories)}"
 
     if not cfg.EVAL_GROUP:
         cfg.EVAL_GROUP = ""
 
     if cfg.RUN_MODE != "train":
         if not os.path.exists(f"{cfg.EVAL_SCORES_PATH}/{cfg.EVAL_SCORES_FNAME}.csv"):
-            columns = "run_name,fold,view,loss,acc,f1,group"
+            columns = "model_name,fold,view,loss,acc,f1,group"
             with open(f"{cfg.EVAL_SCORES_PATH}/{cfg.EVAL_SCORES_FNAME}.csv", "w") as file:
                 file.write(columns)
 

@@ -63,11 +63,11 @@ class Experiment():
         self.net.to(device=self.cfg.DEVICE)
         
         if self.cfg.TRAIN_LOGS:
-            self.writer = SummaryWriter(f"{self.cfg.TRAIN_LOGS_PATH}/self.cfg.RUN_NAME")
+            self.writer = SummaryWriter(f"{self.cfg.TRAIN_LOGS_PATH}/{self.cfg.MODEL_NAME}")
 
         # Model weights setting
         if self.cfg.LOAD_CHECKPOINT:
-            path = f"{self.cfg.CHECKPOINTS_PATH}/bestmodel_{self.cfg.RUN_NAME}.pt"
+            path = f"{self.cfg.CHECKPOINTS_PATH}/bestmodel_{self.cfg.MODEL_NAME}.pt"
             self.net.load_state_dict(torch.load(path, map_location=self.cfg.DEVICE))
             print(f"Loaded model state dict from file {path}")
 
@@ -90,7 +90,7 @@ class Experiment():
 
     def save_net_params(self):
         """Model parameters checkpoint"""
-        path = f"{self.cfg.CHECKPOINTS_PATH}/bestmodel_{self.cfg.RUN_NAME}.pt"
+        path = f"{self.cfg.CHECKPOINTS_PATH}/bestmodel_{self.cfg.MODEL_NAME}.pt"
         torch.save(self.net.state_dict(), path)
 
     def infer_round_light(self, dataloader):
@@ -389,7 +389,7 @@ class Experiment():
         disp = ConfusionMatrixDisplay(confusion_matrix=cf_mat, display_labels=["nonvisible:0","visible:1"])
         disp.plot()
         plt.tight_layout()
-        plt.savefig(f"{self.cfg.EVAL_MAT_PATH}/{self.cfg.RUN_NAME}.png")
+        plt.savefig(f"{self.cfg.EVAL_MAT_PATH}/{self.cfg.MODEL_NAME}.png")
         plt.close()
         return cf_mat.flatten()
 
@@ -420,7 +420,7 @@ class Experiment():
         with open(f"{self.cfg.EVAL_SCORES_PATH}/{self.cfg.EVAL_SCORES_FNAME}.csv", "a") as logs_file:
             for i in range(len(loss)):
                 logs_file.write(
-                    f"\n{self.cfg.RUN_NAME},"
+                    f"\n{self.cfg.MODEL_NAME},"
                     f"{self.cfg.VAL_FOLD},"
                     f"{self.cfg.VAL_VIEW},"
                     f"{loss[i].item():.4f},"
@@ -437,10 +437,10 @@ class Experiment():
         """Perform inferenc on the images of the current dataset subset and save them"""
 
         # Check if directory exists for this run, if not, make one
-        if not os.path.exists(f"{self.cfg.EVAL_IMG_PATH}/{self.cfg.RUN_NAME}"):
-            os.makedirs(f"{self.cfg.EVAL_IMG_PATH}/{self.cfg.RUN_NAME}")
-        if not os.path.exists(f"{self.cfg.EVAL_HIST_PATH}/{self.cfg.RUN_NAME}"):
-            os.makedirs(f"{self.cfg.EVAL_HIST_PATH}/{self.cfg.RUN_NAME}")
+        if not os.path.exists(f"{self.cfg.EVAL_IMG_PATH}/{self.cfg.MODEL_NAME}"):
+            os.makedirs(f"{self.cfg.EVAL_IMG_PATH}/{self.cfg.MODEL_NAME}")
+        if not os.path.exists(f"{self.cfg.EVAL_HIST_PATH}/{self.cfg.MODEL_NAME}"):
+            os.makedirs(f"{self.cfg.EVAL_HIST_PATH}/{self.cfg.MODEL_NAME}")
 
         # Colormap for plotting
         cmap = LinearSegmentedColormap.from_list("", ["fuchsia", "yellow", "lightgreen"])
@@ -472,7 +472,7 @@ class Experiment():
             # Plot source image with patches and ground truth and save it
             plt.imshow(picture)
             plt.scatter(w, h, c = label, s = 5, cmap = cmap, alpha = 0.8, vmin=0, vmax=1)
-            plt.savefig(f"{self.cfg.EVAL_IMG_PATH}/{self.cfg.RUN_NAME}/{image_name}_true.png")
+            plt.savefig(f"{self.cfg.EVAL_IMG_PATH}/{self.cfg.MODEL_NAME}/{image_name}_true.png")
             plt.close()
 
             # Gather inputs
@@ -492,7 +492,7 @@ class Experiment():
             # Plot source image with patches and predicted labels and save it
             plt.imshow(picture)
             plt.scatter(w, h, c = scores, s = 5, cmap = cmap, alpha = 0.8, vmin=0, vmax=1)
-            plt.savefig(f"{self.cfg.EVAL_IMG_PATH}/{self.cfg.RUN_NAME}/{image_name}_pred.png")
+            plt.savefig(f"{self.cfg.EVAL_IMG_PATH}/{self.cfg.MODEL_NAME}/{image_name}_pred.png")
             plt.close()
 
             # Make histplot for prevailing visibility estimation
@@ -518,6 +518,6 @@ class Experiment():
             g.fig.set_figheight(8)
             plt.tight_layout()
             plt.show()
-            plt.savefig(f"{self.cfg.EVAL_HIST_PATH}/{self.cfg.RUN_NAME}/{image_name}.png")
+            plt.savefig(f"{self.cfg.EVAL_HIST_PATH}/{self.cfg.MODEL_NAME}/{image_name}.png")
             g = None
             plt.close()
