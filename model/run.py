@@ -112,7 +112,7 @@ def parse_args():
 
     parser.add_argument("--NUM_EPOCHS", dest="NUM_EPOCHS",
                       help="{Number of training epochs, -1 for infinite (scheduler ends the training)}",
-                      default = 10,
+                      default = 100,
                       type=int)
     
     parser.add_argument("--NUM_WORKERS", dest="NUM_WORKERS",
