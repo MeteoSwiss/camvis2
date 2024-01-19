@@ -47,15 +47,9 @@ def parse_args():
                       type=str)
 
     parser.add_argument("--DEVICE", dest="DEVICE",
-                      choices=["cuda:0", "cuda:1"],
                       help="{Device to use for forward and backward passes. Can be cpu or cuda:n for gpu n}",
                       default = "cuda:1",
                       type=str)
-
-    parser.add_argument("--EPOCH_NUM", dest="EPOCH_NUM",
-                      help="{Number of training epochs, -1 for infinite (scheduler ends the training)}",
-                      default = 100,
-                      type=int)
     
     parser.add_argument("--EVAL_GROUP", dest="EVAL_GROUP",
                       help="{Custom value to group this run with others in the evaluation logs}",
@@ -111,6 +105,11 @@ def parse_args():
                       help="{Minimal learning rate for the scheduler (script stops when the learning rate is below this limit)}",
                       default = 1e-5,
                       type=float)
+
+    parser.add_argument("--NUM_EPOCHS", dest="NUM_EPOCHS",
+                      help="{Number of training epochs, -1 for infinite (scheduler ends the training)}",
+                      default = 100,
+                      type=int)
     
     parser.add_argument("--NUM_WORKERS", dest="NUM_WORKERS",
                       help="{Number of workers on CPU for data loading}",
@@ -121,6 +120,11 @@ def parse_args():
                       help="{Random seed used through the whole experiment}",
                       default = 42,
                       type=int)
+    
+    parser.add_argument("--RAW_IMG_PATH", dest="RAW_IMG_PATH",
+                      help="{Path to the raw images}",
+                      default = f"{DIR_PATH}/../data/raw/images",
+                      type=str)
 
     parser.add_argument("--RUN_MODE", dest="RUN_MODE",
                       choices=["train", "eval", "both"],
@@ -180,18 +184,22 @@ def do_checks(cfg):
     cfg.VAL_VIEW = VIEWS[cfg.VAL_FOLD-1]
 
     # Use CPU if no GPU is available
-    if not torch.cuda.is_available():
+    if (cfg.DEVICE != "cpu") & (not torch.cuda.is_available()):
         cfg.DEVICE = "cpu"
         print("No GPU found, using CPU")
 
     if not cfg.RUN_NAME:
         subdirectories = [d for d in os.listdir(cfg.TRAIN_LOGS_PATH) if os.path.isdir(os.path.join(cfg.TRAIN_LOGS_PATH, d))]
-        cfg.run_name = f"run_{len(subdirectories)}"
+        cfg.RUN_NAME = f"run_{len(subdirectories)}"
+
+    if not cfg.EVAL_GROUP:
+        cfg.EVAL_GROUP = ""
 
     if cfg.RUN_MODE != "train":
-
-        if not os.path.exists(f"{cfg.EVAL_SCORES_PATH}/{cfg.EVAL_SCORES_FNAME},csv"):
-            pass
+        if not os.path.exists(f"{cfg.EVAL_SCORES_PATH}/{cfg.EVAL_SCORES_FNAME}.csv"):
+            columns = "run_name,fold,view,loss,acc,f1,group"
+            with open(f"{cfg.EVAL_SCORES_PATH}/{cfg.EVAL_SCORES_FNAME}.csv", "w") as file:
+                file.write(columns)
 
     return cfg
 
@@ -199,7 +207,6 @@ if __name__ == "__main__":
     # Configuration
     cfg = parse_args()
     cfg = do_checks(cfg)
-    
 
     # Run
     if cfg.RUN_MODE == "train":
