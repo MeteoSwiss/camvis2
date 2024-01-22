@@ -5,9 +5,7 @@ from time import time
 
 import cv2
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import numpy as np
-import pandas as pd
 import seaborn as sns
 import torch
 import torch.nn as nn
@@ -29,7 +27,34 @@ DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 class Experiment():
     def __init__(self, cfg):
-        """Initialization"""
+        """
+        A class representing an experiment for training and evaluating a neural network model.
+
+        Args:
+            cfg (object): An object containing various configuration parameters for the experiment.
+
+        Attributes:
+            cfg (object): Configuration object containing experiment parameters.
+            dataset (MultiMagnificationPatches): Dataset object for training and evaluation.
+            net (MultiMagnificationNet): Neural network model for the experiment.
+            writer (SummaryWriter): Tensorboard writer for logging training information.
+            optimizer (torch.optim.Adam): Optimizer for updating model parameters.
+            scheduler (torch.optim.lr_scheduler.ReduceLROnPlateau): Learning rate scheduler.
+            criterion (nn.BCEWithLogitsLoss): Loss function for training.
+            scaler (torch.cuda.amp.GradScaler): Gradient scaler for mixed-precision training.
+
+        Methods:
+            seed_worker(worker_id): Initialize dataloader workers random seeds.
+            save_net_params(): Save the model parameters to a checkpoint file.
+            infer_round_light(dataloader): Perform a lighter version of the inference round for validation.
+            infer_round(dataloader): Perform a full inference round and compute global metrics.
+            train_round_mixed_precision(dataloader): Perform forward pass, backward pass, metrics computation, and parameters update with mixed-precision training.
+            train_round(dataloader): Perform forward pass, backward pass, metrics computation, and parameters update with regular training.
+            bootstrap_infer(dataloader, num_iterations=10, num_samples=False, cf_mat=True): Perform inference with bootstrapping for more interpretable evaluation.
+            make_cf_mat(preds, targets): Build a confusion matrix and save it as an image.
+            infer_on_images(): Perform inference on images of the current dataset subset and save the results.
+
+        """
 
         # Config, dataset and network
         self.cfg = cfg
@@ -62,6 +87,7 @@ class Experiment():
             align_features=self.cfg.ALIGN_FEATURES)
         self.net.to(device=self.cfg.DEVICE)
         
+        # Tensorboard logging
         if self.cfg.TRAIN_LOGS:
             self.writer = SummaryWriter(f"{self.cfg.TRAIN_LOGS_PATH}/{self.cfg.MODEL_NAME}")
 
@@ -83,18 +109,55 @@ class Experiment():
         self.scaler = torch.cuda.amp.GradScaler()
 
     def seed_worker(self, worker_id):
-        """Initializ dataloader workers random seeds (https://pytorch.org/docs/stable/notes/randomness.html)"""
+        """
+        Initialize dataloader workers random seeds based on the given worker identifier.
+        Based on https://pytorch.org/docs/stable/notes/randomness.html
+
+        Args:
+            worker_id (int): Identifier for the dataloader worker.
+
+        Note:
+            This method sets the random seed for NumPy and Python's built-in random module
+            to ensure reproducibility in dataloader workers. The seed is computed using the
+            initial seed from PyTorch, allowing for reproducibility across different libraries.
+
+        Returns:
+            None
+        """
         worker_seed = torch.initial_seed() % 2**32
         np.random.seed(worker_seed)
         random.seed(worker_seed)
 
     def save_net_params(self):
-        """Model parameters checkpoint"""
+        """
+        Save the current state of the neural network parameters as a checkpoint.
+
+        Returns:
+            None
+
+        Note:
+            This method saves the state dictionary of the neural network's parameters to a
+            specified file path. The saved file can later be used to restore the model to
+            its current state.
+            The file is saved in PyTorch's native format (`.pt`).
+        """
         path = f"{self.cfg.CHECKPOINTS_PATH}/bestmodel_{self.cfg.MODEL_NAME}.pt"
         torch.save(self.net.state_dict(), path)
 
     def infer_round_light(self, dataloader):
-        """Forward pass and loss only, lighter version of the inference_round"""
+        """
+        Forward pass and loss only, lighter version of the inference_round.
+
+        Args:
+            dataloader (torch.utils.data.DataLoader): DataLoader providing batches of data.
+
+        Returns:
+            float: Average loss over all batches.
+
+        Note:
+            This method performs a forward pass and calculates the loss on the provided DataLoader,
+            without updating the model's weights. It is a lighter version of the `infer_round` method.
+        """
 
         # Set model to train mode, dataloader and metrics
         self.net.eval()
@@ -118,7 +181,24 @@ class Experiment():
         return accum_loss/step_count
     
     def infer_round(self, dataloader):
-        """Forward pass and global metrics computation"""
+        """
+        Forward pass and global metrics computation.
+
+        Args:
+            dataloader (torch.utils.data.DataLoader): DataLoader providing batches of data.
+
+        Returns:
+            tuple: Tuple containing the following elements:
+                float: Loss computed over all batches.
+                float: Macro-average accuracy.
+                float: Macro-average F1 score.
+                torch.Tensor: Predictions for all samples.
+                torch.Tensor: Ground truth labels for all samples.
+
+        Note:
+            This method performs a forward pass on the provided DataLoader, computes global metrics,
+            and returns a tuple with loss, accuracy, F1 score, predictions, and ground truth labels.
+        """
 
         # Set model to eval mode, dataloader and metrics
         self.net.eval()
@@ -151,8 +231,19 @@ class Experiment():
         return loss, acc, f1, all_preds.cpu(), all_targets.cpu()
     
     def train_round_mixed_precision(self, dataloader):
-        """Forward pass, backard pass, metrics computation and parameters update"""
-        
+        """
+        Forward pass, backward pass, metrics computation, and parameters update using mixed precision.
+
+        Args:
+            dataloader (torch.utils.data.DataLoader): DataLoader providing batches of data.
+
+        Returns:
+            float: Average loss over all batches.
+
+        Note:
+            This method performs a forward pass, backward pass, and updates model parameters using mixed precision.
+            It is designed to speed up training by using Automatic Mixed Precision (AMP).
+        """
         # Set model to train mode, dataloader and metrics
         self.net.train()
         accum_loss = 0
@@ -185,7 +276,19 @@ class Experiment():
         return accum_loss/step_count
     
     def train_round(self, dataloader):
-        """Forward pass, backard pass, metrics computation and parameters update"""
+        """
+        Forward pass, backward pass, metrics computation, and parameters update.
+
+        Args:
+            dataloader (torch.utils.data.DataLoader): DataLoader providing batches of data.
+
+        Returns:
+            float: Average loss over all batches.
+
+        Note:
+            This method performs a forward pass, backward pass, and updates model parameters.
+            It is used during the training phase.
+        """
         
         # Set model to train mode, dataloader and metrics
         self.net.train()
@@ -216,8 +319,14 @@ class Experiment():
         return accum_loss/step_count
 
     def train(self):
-        """Training loop"""
+        """
+        Train the model using the specified configuration.
 
+        Note:
+            This method performs the training loop, including forward and backward passes, metrics computation,
+            model saving, learning rate scheduling, and logging.
+        """
+        
         # Ensure reproducibility
         g = torch.Generator()
         g.manual_seed(self.cfg.RANDOM_SEED)
@@ -350,7 +459,26 @@ class Experiment():
         exit()
 
     def bootstrap_infer(self, dataloader, num_iterations = 10, num_samples = False, cf_mat=True):
-        """Perform inference with bootstrapping for a more interpretable evaluation of the performance"""
+        """
+        Perform inference with bootstrapping for a more interpretable evaluation of the performance.
+
+        Args:
+            dataloader (torch.utils.data.DataLoader): DataLoader providing batches of data.
+            num_iterations (int): Number of bootstrap iterations.
+            num_samples (int, optional): Number of samples to draw in each iteration. Default is False.
+            cf_mat (bool, optional): Whether to compute and display a confusion matrix. Default is True.
+
+        Returns:
+            tuple: Tuple containing the following elements:
+                torch.Tensor: Concatenated losses over all iterations.
+                torch.Tensor: Concatenated macro-average accuracies over all iterations.
+                torch.Tensor: Concatenated macro-average F1 scores over all iterations.
+
+        Note:
+            This method performs inference using bootstrapping, sampling with replacement from the predictions and targets
+            obtained from a single round of inference. It provides more interpretable evaluation metrics by considering
+            variability in performance due to random sampling.
+        """
 
         # Initialize variables to store performances
         concat_loss = torch.zeros(num_iterations)
@@ -384,7 +512,20 @@ class Experiment():
         return concat_loss, concat_acc, concat_f1
 
     def make_cf_mat(self, preds, targets):
-        """Building of confusion matrix and saving as an image"""
+        """
+        Build the confusion matrix and save it as an image.
+
+        Args:
+            preds (torch.Tensor): Predicted values.
+            targets (torch.Tensor): True target values.
+
+        Returns:
+            numpy.ndarray: Flattened confusion matrix.
+
+        Note:
+            This method uses sklearn's confusion_matrix and ConfusionMatrixDisplay for visualization.
+            The confusion matrix image is saved in the specified path.
+        """
         cf_mat = confusion_matrix(targets.round().int(), preds.round().int(), labels=[0,1])
         disp = ConfusionMatrixDisplay(confusion_matrix=cf_mat, display_labels=["nonvisible:0","visible:1"])
         disp.plot()
@@ -394,14 +535,19 @@ class Experiment():
         return cf_mat.flatten()
 
     def eval(self):
-        """Evaluation of inference"""
+        """
+        Evaluate the model using inference on images and bootstrap aggregation.
+
+        Note:
+            This method performs inference on images, and performs bootstrapping to evaluate the model's performance.
+            It logs the evaluation results to a CSV file.
+        """
         
         # Infer on images
         self.dataset.val()
         self.infer_on_images()
         
-        # Validate
-        self.dataset.val()
+        # Make dataloader
         infer_dataloader = DataLoader(
             self.dataset, 
             shuffle=False, 
@@ -416,7 +562,7 @@ class Experiment():
         loss, acc, f1 = self.bootstrap_infer(infer_dataloader)
         self.infer_dataloader = None
         
-        
+        # Results logging
         with open(f"{self.cfg.EVAL_SCORES_PATH}/{self.cfg.EVAL_SCORES_FNAME}.csv", "a") as logs_file:
             for i in range(len(loss)):
                 logs_file.write(
@@ -428,13 +574,17 @@ class Experiment():
                     f"{f1[i].item():.4f},"
                     f"{self.cfg.EVAL_GROUP}"
                 )
-        
-        
         exit()
 
     
     def infer_on_images(self):
-        """Perform inferenc on the images of the current dataset subset and save them"""
+        """
+        Perform inference on the images of the current dataset subset and save the results.
+
+        Note:
+            This method visualizes the ground truth and predicted labels on source images and saves them.
+            It also creates histograms for the prevailing visibility estimation and saves them.
+        """
 
         # Check if directory exists for this run, if not, make one
         if not os.path.exists(f"{self.cfg.EVAL_IMG_PATH}/{self.cfg.MODEL_NAME}"):
