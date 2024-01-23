@@ -1,6 +1,6 @@
 # CAMVIS2 - Estimation of Visibility on Webcam Images using Multi-Magnification Convolutional Networks
 
-![alt text](utils/prediction_example.jpg "Visibility Prediction Example")
+![alt text](utils/prediction_example.png "Visibility Prediction Example")
 
 ## Quickstart
 This section provides instruction to build the dataset and replicate the experiments we made. Instructions are provided for UNIX systems only. If you want to use a different OS, you may need to install required libraries manually in order to avoid compatibility issues.
