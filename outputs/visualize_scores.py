@@ -44,7 +44,7 @@ def make_plot(df, x, y):
     sns.stripplot(data=df, x=x, y=y, hue="fold", palette=colormap, dodge=False, jitter=0.3)
 
     # Set labels and title
-    plt.xlabel(x)
+    plt.xlabel(f"Model group")
     plt.ylabel(f"Performance : {y}")
     plt.title('Validation Performance per Fold')
 
