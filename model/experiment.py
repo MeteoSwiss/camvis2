@@ -507,7 +507,6 @@ class Experiment():
 
         for i in range(num_iterations):
             idx = torch.multinomial(input = torch.ones(len(preds)).float(), num_samples=num_samples, replacement=True, generator=generator)
-
             concat_loss[i] = self.criterion(preds[idx],targets[idx])
             round_preds = preds[idx].round().to(dtype=torch.int64)
             round_targets = targets[idx].round().to(dtype=torch.int64)
@@ -551,8 +550,9 @@ class Experiment():
         # Infer on images
         self.dataset.val()
         self.infer_on_images()
-        
+
         # Make dataloader
+        self.dataset.val()
         infer_dataloader = DataLoader(
             self.dataset, 
             shuffle=False, 
@@ -627,6 +627,7 @@ class Experiment():
             # Plot source image with patches and ground truth and save it
             plt.imshow(picture)
             plt.scatter(w, h, c = label, s = 5, cmap = cmap, alpha = 0.8, vmin=0, vmax=1)
+            plt.axis("off")
             plt.savefig(f"{self.cfg.EVAL_IMG_PATH}/{self.cfg.MODEL_NAME}/{image_name}_true.png")
             plt.close()
 
@@ -647,6 +648,7 @@ class Experiment():
             # Plot source image with patches and predicted labels and save it
             plt.imshow(picture)
             plt.scatter(w, h, c = scores, s = 5, cmap = cmap, alpha = 0.8, vmin=0, vmax=1)
+            plt.axis("off")
             plt.savefig(f"{self.cfg.EVAL_IMG_PATH}/{self.cfg.MODEL_NAME}/{image_name}_pred.png")
             plt.close()
 
