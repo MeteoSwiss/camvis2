@@ -43,7 +43,7 @@ In this experiment, you will train two model architectures using a 9-fold cross 
 
 To do train the models and do the inference of the trained models on the valiation sets of each fold, execute the folling script.
 ```bash
-bash cat_vs_align.sh
+bash train_cat_vs_align.sh
 ```
 Training the 18 models (2 architectures times 9 folds) takes close to 15 hours when using an NVIDIA A100 GPU. 
 
@@ -56,6 +56,10 @@ The models checkpoints are saved in the outputs/checkpoints directory.
 
 
 ### Visualize Results
+Once model weights are trained, you can infer on the validations sets for each set using each model by executing the command below.
+```bash
+bash eval_cat_vs_align.sh
+```
 For each model, you can see the results of the inference on the validation set in subdirectories of outputs/. 
 + Confusion matrices are available in outputs/val_cf_matrices
 + Ground-truth and prediction on webcam images are available in outputs/val_images
