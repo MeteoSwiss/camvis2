@@ -2,8 +2,9 @@
 #
 # Distributed under the terms of the BSD 3-Clause License.
 #
-# SPDX-License-Identifier: BSD-3-Clauseimport argparse
+# SPDX-License-Identifier: BSD-3-Clause
 
+import argparse
 import os
 
 import matplotlib.cm as cm
@@ -85,13 +86,13 @@ def parse_args():
     parser = argparse.ArgumentParser()
     
     parser.add_argument("-n", "--EVAL_SCORES_FNAME", dest="EVAL_SCORES_FNAME",
-                      help="{Path to the logs of evaluation of patches}",
+                      help="File name of the logs of patches evaluation",
                       default = f"eval_scores",
                       type=str)
     
     parser.add_argument("-v", "--VIZUALIZE", dest="VIZUALIZE",
                        action="store_true", 
-                       help={"If used, displays generated graphs"})
+                       help="If used, displays generated graphs")
     
     parser.add_argument("-s", "--SAVE", dest="SAVE",
                       help="If used, saves the generated graphs",
