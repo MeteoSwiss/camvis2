@@ -550,7 +550,7 @@ class Experiment():
         # Infer on images
         self.dataset.val()
         self.infer_on_images()
-
+        
         # Make dataloader
         self.dataset.val()
         infer_dataloader = DataLoader(
@@ -674,7 +674,6 @@ class Experiment():
             g.fig.set_figwidth(12)
             g.fig.set_figheight(8)
             plt.tight_layout()
-            plt.show()
             plt.savefig(f"{self.cfg.EVAL_HIST_PATH}/{self.cfg.MODEL_NAME}/{image_name}.png")
             g = None
             plt.close()
