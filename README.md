@@ -159,7 +159,7 @@ This will create a subdirectory in outputs/val_scores with the same name as the 
 In this section, we explain our main model architecture as well as modifications that can be brought to the model. The model implementation in pytorch is available in the model/model.py script.
 
 #### Basic Model
-Our model is a multi-magnification model, which means that it leverages several concentric patches corresponding to multiple levels of magnification. It is mostly inspired by the architectures proposed in (Ho et al., 2021)(#1). The authors propose to leverage multiple levels of magnification to address a segmentation task with scarce annotation and high resolution images, which relates to our task. The model in its simplemost version can be sketched as follows.
+Our model is a multi-magnification model, which means that it leverages several concentric patches corresponding to multiple levels of magnification. It is mostly inspired by the architectures proposed in [(Ho et al., 2021)](#2). The authors propose to leverage multiple levels of magnification to address a segmentation task with scarce annotation and high resolution images, which relates to our task. The model in its simplemost version can be sketched as follows.
 
 <img src="utils/model_archi.png" width="640">
 <img src="utils/conv_archi.png" width="200">
