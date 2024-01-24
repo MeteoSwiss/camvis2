@@ -59,7 +59,7 @@ def make_plot(df, x, y):
     # Show legend
     plt.legend(handles, labels, title='Fold', bbox_to_anchor=(1.05, 1), loc='upper left')
 
-    x_offsets = [0.6, 1.7, 2.7, 3.8, 4.8, 5.9, 6.9]
+    x_offsets = [0.6, 1.7, 2.7, 3.8, 4.8, 5.9, 6.9, 8]
     # Add text for cameras
     plt.text(
         x_offsets[df["group"].nunique()-1],
