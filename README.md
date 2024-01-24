@@ -152,3 +152,63 @@ Once everything is finished, you can create visualizations of the results using 
 python outputs/visualize_scores.py -n cat_vs_align -s -v
 ```
 This will create a subdirectory in outputs/val_scores with the same name as the scores file. Inside the directory, you can find visualizations of accuracies, f1 scores and loss values across folds and model architectures.
+
+## Highlights on Project Components
+
+### Model
+In this section, we explain our main model architecture as well as modifications that can be brought to the model. The model implementation in pytorch is available in the model/model.py script.
+
+#### Basic Model
+Our model is a multi-magnification model, which means that it leverages several concentric patches corresponding to multiple levels of magnification. It is mostly inspired by the architectures proposed in (Ho et al., 2021)(#1). The authors propose to leverage multiple levels of magnification to address a segmentation task with scarce annotation and high resolution images, which relates to our task. The model in its simplemost version can be sketched as follows.
+
+<img src="utils/model_archi.png" width="640">
+<img src="utils/conv_archi.png" width="200">
+
+At each magnification level, the patch (128x128 images composed of RGB and depth channels) is encoded using a Convolutional encoder made of 7 convolutional encoding blocks. Then, the encodings of each patch are concatenated, and fed to a linear layer that works as the classifier.
+
+Here is a basic example of how to use the model
+```python
+import torch
+from model import MultiMagnificationNet
+
+net = MultiMagnificationNet(num_levels=4, num_channels=4, size_hidden=128)
+input_data = torch.randn(32, 16, 128, 128)  # Batch size of 32, 4 input channels per magnification level, image size 128x128
+output = multi_magnification_net(input_data).squeeze() # Output of size 32 
+```
+
+#### Classifier Modding
+While using a linear layer as a classifier, being able to apply a final non-linearity after the encoding might be beneficial in some cases. For this reason, we introduce a modified version of the model architecture which allows to switch the classifier to a Multi-Layer Perceptron. It is a one hidden layer MLP, and the size of the layer is equal to the number of hidden channels used in the encoder. To enable it, just set the use_mlp argument to True and the classifier will become an MLP.
+
+```python
+net = MultiMagnificationNet(num_levels=4, num_channels=4, size_hidden=128, use_mlp=True)
+```
+
+#### Weights Sharing
+Since features appearing at different levels might be similar, it makes sense to try and share the weights of the encoders applied on the patches at different magnification levels, as suggested in [(Ly et al., 2020)](#2). This allows to drastically reduce the number of weights to train, which can come in handy in a context of data scarcity. To enable weight sharing, set the share_weights argument to True when declaring the model.
+
+```python
+net = MultiMagnificationNet(num_levels=4, num_channels=4, size_hidden=128, share_weights=True)
+```
+#### Features Alignment
+While concentric patches provide contextual information and keep better resolutions closer to the center, they have the following drawback : the features present on the patches are not physically aligned. The content of a patch at a given magnification level in the top left corner does not correspond to that of another magnification level. With this in mind, concatenating features as in the initial architecture proposition might seem odd. 
+
+To propose a more natural way to concatenate signals at several levels, we propose the following method : instead of concatenating the encoded signals for each magnification level, we encode the first image (full resolution), and we stack its encoding to the second level of magnification image. We then repeat the process until all the levels are encoded. The classification process remains unchanged. We use a simple convolutional encoding block at each level of encoding. Since the spatial dimension of the signal decreases of a factor two when passed in an encoding block, we pad it with zeros to match its original dimensions. This way, it can be matched with the next lower magnification level, and the same features present on both signals are spatially aligned.
+
+In order to enable the alignment of features, you can set the align_features argument of the model to True as follows.
+```python
+net = MultiMagnificationNet(num_levels=4, num_channels=4, size_hidden=128, align_features=True)
+```
+
+### Best Model
+According to our experiments, the scores are higher when using the model with a linear classifier, weights sharing and no features alignment.
+
+In order to declare our best model configuration, you can use the following command.
+```python
+net = MultiMagnificationNet(num_levels=4, num_channels=4, size_hidden=128, share_weights=True, use_mlp=False, align_features=False)
+```
+
+## References
+
+<a id="1">[1]</a>  Ho, D. J., Yarlagadda, D. V., D’Alfonso, T. M., Hanna, M. G., Grabenstetter, A., Ntiamoah, P., ... & Fuchs, T. J. (2021). Deep multi-magnification networks for multi-class breast cancer image segmentation. Computerized Medical Imaging and Graphics, 88, 101866.
+
+<a id="2">[2]</a>  Ly, C., Vachet, C., Schwerdt, I., Abbott, E., Brenkmann, A., McDonald, L. W., & Tasdizen, T. (2020). Determining uranium ore concentrates and their calcination products via image classification of multiple magnifications. Journal of Nuclear Materials, 533, 152082.
