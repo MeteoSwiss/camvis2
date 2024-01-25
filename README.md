@@ -263,7 +263,7 @@ Thankfully, our dataset can be saved in a smart way, which allows to reduce its 
 In oder to create a pair of input and target, we use the patch coordinates of the input to crop the images and depth maps at different magnification levels. The cropped images are then stacked into a single tensor and the label is obtained from the metadata file.
 
 #### Swapping Sets
-The dataset class has built-in methods that allow to use only the desired subset of data. They work as follows.
+The Dataset class has built-in methods that allow to use only the desired subset of data. They work as follows.
 ```python
 dataset.train() # only training data can be recovered using getitem
 dataset.val() # only validation data can be recovered using getitem
@@ -273,6 +273,14 @@ dataset.all() # all data can be recovered using getitem, no matter the set
 
 #### Examples Sampling
 Since the number of examples in front and behind the visibility limit are heavily imbalanced, we want to feed the data to the model so that it sees the same amount of examples for each class. To do so, we implemented a sampler, which computes the amount of examples that are behind the visibility limit, and then samples the same amount of examples from the other pool. The sampling is repeated every time the dataset is set to train mode, so the diversity in the training data is not reduced. The sampler is implemented in the resample_positives method.
+
+### Experiment Class
+The Experiment class allows to declare the correct dataset and model according to the parser, and then perform the run using its methods. The code for the experiment class is stored in the model/experiment.py file.
+
+Without going too much into details, the main components of the Experiment class are :
++ Initialization : declaration of model, dataset, optimizer, loss function, loading of pretrained weights, ...
++ Training : Forward and backward passes on training samples, forward passes on validation samples, metrics logging, model weights save, repetition at each epoch, ...
++ Evaluation : Forward passes on validation samples, metrics logging with bootstrapping, creation of output images and plots, ...
 
 ## References
 
