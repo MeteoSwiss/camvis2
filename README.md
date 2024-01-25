@@ -164,8 +164,8 @@ python model/model.py
 #### Basic Model
 Our model is a multi-magnification model, which means that it leverages several concentric patches corresponding to multiple levels of magnification. It is mostly inspired by the architectures proposed in [(Ho et al., 2021)](#2). The authors propose to leverage multiple levels of magnification to address a segmentation task with scarce annotation and high resolution images, which relates to our task. The model in its simplemost version can be sketched as follows.
 
-<img src="utils/model_archi.png" width="640">
-<img src="utils/conv_archi.png" width="200">
+<img src="utils/model_archi.png" width="560">
+<img src="utils/conv_archi.png" width="160">
 
 At each magnification level, the patch (128x128 images composed of RGB and depth channels) is encoded using a Convolutional encoder made of 7 convolutional encoding blocks. Then, the encodings of each patch are concatenated, and fed to a linear layer that works as the classifier.
 
@@ -216,6 +216,29 @@ bash run_scripts/train_all_architectures.sh
 bash run_scripts/eval_all_architectures.sh
 python outputs/vizualize_scores -n all_architectures -v -s
 ```
+
+### Run Parser
+In order to execute runs using our model, we implemented an arguments parser that aims to capture all the settings one might one to experiment with. The code of the parser is in the model/run.py file and you can see what are the different arguments as well as the default values and choices when applicable by executing the following command.
+```bash
+python model/run.py -h
+```
+
+All the listed arguments can be set in the command line as follows.
+```bash
+python model/run.py --ARGUMENT_A value_a --ARGUMENT_B value_b # And so on ...
+```
+
+You will want to explicitly set some of the parameters for each run. These may include parameters like :
++ --RUN_MODE : whether you are running a training or an inference of the model
++ --MODEL_NAME : your model name to save/load your trained model weights
++ ...
+
+While some of the arguments can be set by editing the default value in the model/run.py file. These arguments might include parameters that you are not going to change from one run to another like for example:
++ --DEVICE : device on which you want to execute your computations
++ --NUM_WORKERS : number of cpu threads dedicated to loading the data
++ ...
+
+
 
 ### Dataset Class
 The dataset class allows to rapidly load and feed the appropriate data to our model in batches. It is based on a [pytorch dataset class](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html#creating-a-custom-dataset-for-your-files) and has a few additional custom methods and features exposed below. The code of the dataset class is available in model/dataset.py. You can see what a batch of data looks like by executing the command below.
