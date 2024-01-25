@@ -32,7 +32,7 @@ pyenv activate myenv
 Now that the virtual environment is created, you can install the needed libraries provided in the requirements.txt file as follows : 
 ```bash
 pip3 install --upgrade pip
-pip3 install -r requirements.txt
+pip3 install -r utils/requirements.txt
 ```
 
 #### Install Dependencies (B) Without Versions Matching
@@ -79,7 +79,7 @@ The model/run.py script allows to launch experiments. It comes with a parser tha
 For convenience, we provide bash files with pre-written run.py commands and arguments. However, it is strongly advised to familiarize yourself with the run.py arguments parser if you want tu use this project more extensively. You can find information about how to use it in the **Run Parser** section.
 To train the model on the training sets of each fold, execute the following script.
 ```bash
-bash train_model.sh
+bash run_scripts/train_model.sh
 ```
 
 Training the model on 9 different folds takes close to 7 hours when using an NVIDIA A100 GPU. 
@@ -92,7 +92,7 @@ tensorboard --logdir outputs/training_logs
 #### Evaluate the Model
 Once model weights are trained, you can infer on the validations sets for each fold by executing the command below.
 ```bash
-bash eval_model.sh
+bash run_scripts/eval_model.sh
 ```
 
 #### Visualize Results
@@ -117,7 +117,7 @@ Feel free to experiment with different model architectures by altering the bash 
 #### Train the Models
 To train the models on the training sets of each fold, execute the folling script.
 ```bash
-bash train_cat_vs_align.sh
+bash run_scripts/train_cat_vs_align.sh
 ```
 Training the 18 models (2 architectures times 9 folds) takes close to 15 hours when using an NVIDIA A100 GPU. 
 
@@ -136,7 +136,7 @@ If you compare the eval bash file to that of the previous experiment, you can ob
 
 Since we are comparing two architectures, we use **cat** and **align** as the two groups. 
 ```bash
-bash eval_cat_vs_align.sh
+bash run_scripts/eval_cat_vs_align.sh
 ```
 
 #### Visualize Results
