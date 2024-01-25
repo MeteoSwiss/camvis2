@@ -155,6 +155,15 @@ This will create a subdirectory in outputs/val_scores with the same name as the 
 
 ## Highlights on Project Components
 
+### Data
+The data we use to predict visibility is made of webcam images and depth map (3d rendering of the landscape appearing in the field of view of the camera). In the example below, you can find example of a pair of webcam image and the corresponding depth map.
+![alt text](utils/raw_data_example.png "Webcam image and depth rendering (log scale)")
+
+The annotations are provided as segmentation masks and where made by hand. An example of an image and annotation is displayed below.
+![alt text](utils/annotation_example.png "Webcam image and segmentation mask")
+
+From this original data, we sample patches using the depth values scarcity as weights so our dataset has a balanced representation of objects at different scales. We sample 500 patches per image-depth pair.
+
 ### Model
 In this section, we explain our main model architecture as well as modifications that can be brought to the model. The model implementation in pytorch is available in the model/model.py script. You can see the model architecture and number of parameters with the different possible configurations by executing the command below.
 ```bash
