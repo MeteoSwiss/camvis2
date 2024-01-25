@@ -156,7 +156,10 @@ This will create a subdirectory in outputs/val_scores with the same name as the 
 ## Highlights on Project Components
 
 ### Model
-In this section, we explain our main model architecture as well as modifications that can be brought to the model. The model implementation in pytorch is available in the model/model.py script.
+In this section, we explain our main model architecture as well as modifications that can be brought to the model. The model implementation in pytorch is available in the model/model.py script. You can see the model architecture and number of parameters with the different possible configurations by executing the command below.
+```bash
+python model/model.py
+```
 
 #### Basic Model
 Our model is a multi-magnification model, which means that it leverages several concentric patches corresponding to multiple levels of magnification. It is mostly inspired by the architectures proposed in [(Ho et al., 2021)](#2). The authors propose to leverage multiple levels of magnification to address a segmentation task with scarce annotation and high resolution images, which relates to our task. The model in its simplemost version can be sketched as follows.
@@ -169,7 +172,7 @@ At each magnification level, the patch (128x128 images composed of RGB and depth
 Here is a basic example of how to use the model
 ```python
 import torch
-from model import MultiMagnificationNet
+from model/model import MultiMagnificationNet
 
 net = MultiMagnificationNet(num_levels=4, num_channels=4, size_hidden=128)
 input_data = torch.randn(32, 16, 128, 128)  # Batch size of 32, 4 input channels per magnification level, image size 128x128
@@ -199,13 +202,54 @@ In order to enable the alignment of features, you can set the align_features arg
 net = MultiMagnificationNet(num_levels=4, num_channels=4, size_hidden=128, align_features=True)
 ```
 
-### Best Model
+#### Best Model
 According to our experiments, the scores are higher when using the model with a linear classifier, weights sharing and no features alignment.
 
 In order to declare our best model configuration, you can use the following command.
 ```python
 net = MultiMagnificationNet(num_levels=4, num_channels=4, size_hidden=128, share_weights=True, use_mlp=False, align_features=False)
 ```
+
+If you want to find out by yourself which of the architecture works the best, you can repeat the experiment by executing the following commands in your terminal.
+```bash
+bash run_scripts/train_all_architectures.sh
+bash run_scripts/eval_all_architectures.sh
+python outputs/vizualize_scores -n all_architectures -v -s
+```
+
+### Dataset Class
+The dataset class allows to rapidly load and feed the appropriate data to our model in batches. It is based on a [pytorch dataset class](https://pytorch.org/tutorials/beginner/basics/data_tutorial.html#creating-a-custom-dataset-for-your-files) and has a few additional custom methods and features exposed below. The code of the dataset class is available in model/dataset.py. You can see what a batch of data looks like by executing the command below.
+```bash
+python model/dataset.py
+```
+
+To declare the dataset, you can proceed as follows.
+```python
+from model/dataset import MultiMagnificationPatches
+dataset = MultiMagnificationPatches(dataset_path="/data/processed", demagnification_factors=[2,4,8,16,32], random_seed=42, val_view="1148_1", test_view="1206_4")
+```
+#### Data Pre-Loading
+If a dataset is small enough, we can afford to load it completely on the ram instead of iteratively reading the chunks we need to create each batch. This trick allows to save lot of time as read operations are quite costly when fetching data. 
+
+Thankfully, our dataset can be saved in a smart way, which allows to reduce its storage size to 13 GB. We can thus directly load all the image and depth data in addition to the metadata in the dataset initialization. When created using the data/make_dataset.py, the data is stored as follows : 
++ The patches' center canvas coordinates, as well as the id of the reference image (out of 121 images) and depthmap (out of 9 depthmaps) are stored in the metadata.csv file
++ The patches' labels are also saved in the metadata file
++ For each magnification level, resized versions of the complete images and depth maps are stored in a separate .pt file
+
+#### Data Fetching
+In oder to create a pair of input and target, we use the patch coordinates of the input to crop the images and depth maps at different magnification levels. The cropped images are then stacked into a single tensor and the label is obtained from the metadata file.
+
+#### Swapping Sets
+The dataset class has built-in methods that allow to use only the desired subset of data. They work as follows.
+```python
+dataset.train() # only training data can be recovered using getitem
+dataset.val() # only validation data can be recovered using getitem
+dataset.test() # only test data can be recovered using getitem
+dataset.all() # all data can be recovered using getitem, no matter the set
+```
+
+#### Examples Sampling
+Since the number of examples in front and behind the visibility limit are heavily imbalanced, we want to feed the data to the model so that it sees the same amount of examples for each class. To do so, we implemented a sampler, which computes the amount of examples that are behind the visibility limit, and then samples the same amount of examples from the other pool. The sampling is repeated every time the dataset is set to train mode, so the diversity in the training data is not reduced. The sampler is implemented in the resample_positives method.
 
 ## References
 
