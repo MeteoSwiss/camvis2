@@ -60,7 +60,7 @@ def parse_args():
 
     parser.add_argument("--DEVICE", dest="DEVICE",
                       help="Device to use for forward and backward passes. Can be cpu or cuda:n for gpu n or just cuda if you have only one",
-                      default = "cuda:1",
+                      default = "cuda",
                       type=str)
     
     parser.add_argument("--EVAL_GROUP", dest="EVAL_GROUP",
