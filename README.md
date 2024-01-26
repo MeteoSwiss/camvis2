@@ -153,6 +153,15 @@ python outputs/visualize_scores.py -n cat_vs_align -s -v
 ```
 This will create a subdirectory in outputs/val_scores with the same name as the scores file. Inside the directory, you can find visualizations of accuracies, f1 scores and loss values across folds and model architectures.
 
+### Clean the Outputs Folder
+If you want to start new experiments and get rid of generated outputs, you might want to do it systematically rather than manually using bash commands. You can use commands as displayed below to do so. However, we strongly recommend carefully reading the commands and making sure that they are adapted to the directory structure. If it is not the case, you may end up losing the wrong files.
+```bash
+# remove files except .gitkeeps
+find outputs/ -type f ! -name ".gitkeep" ! -name "*.py" -exec rm -f {} +
+# remove empty directories
+find outputs/ -mindepth 1 -type d -empty -exec rmdir {} +
+``` 
+
 ## Highlights on Project Components
 
 ### Data
