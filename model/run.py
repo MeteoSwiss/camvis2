@@ -219,7 +219,7 @@ def do_checks(cfg):
 
     # Set default EVAL_GROUP if not provided
     if not cfg.EVAL_GROUP:
-        cfg.EVAL_GROUP = ""
+        cfg.EVAL_GROUP = cfg.EVAL_SCORES_FNAME
 
     # If running in evaluation mode, create CSV file for evaluation scores if it doesn't exist
     if cfg.RUN_MODE == "eval":
