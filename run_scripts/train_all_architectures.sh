@@ -19,7 +19,7 @@ for VAL_FOLD in {1..9}; do
                     --SAVE_CHECKPOINTS \
                     --MODEL_NAME "${USE_MLP}_${SHARE_WEIGHTS}_${ALIGN_FEATURES}_fold_${VAL_FOLD}" \
                     $(if [ "$ALIGN_FEATURES" == "alignment" ]; then echo "--ALIGN_FEATURES"; fi) \
-                    $(if [ "$SHARE_WEIGHTS" == "sharing" ]; then echo "--ALIGN_FEATURES"; fi) \
+                    $(if [ "$SHARE_WEIGHTS" == "sharing" ]; then echo "--SHARE_WEIGHTS"; fi) \
                     $(if [ "$USE_MLP" == "mlp" ]; then echo "--USE_MLP"; fi) \
 
             done
