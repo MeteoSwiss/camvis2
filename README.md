@@ -1,4 +1,4 @@
-# CAMVIS2 - Estimation of Visibility on Webcam Images using Multi-Magnification Convolutional Networks
+# camvis2 - Estimation of Visibility on Webcam Images using Multi-Magnification Convolutional Networks
 
 ![alt text](utils/prediction_example.png "Visibility Prediction Example")
 
