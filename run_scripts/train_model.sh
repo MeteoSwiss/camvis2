@@ -12,6 +12,7 @@ for VAL_FOLD in {1..9}; do
         --TRAIN_FAST \
         --AMP \
         --SHARE_WEIGHTS \
+        --USE_MLP \
         --VAL_FOLD $VAL_FOLD \
         --TRAIN_LOGS \
         --SAVE_CHECKPOINTS \

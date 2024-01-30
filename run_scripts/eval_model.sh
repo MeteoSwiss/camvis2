@@ -10,6 +10,7 @@ for VAL_FOLD in {1..9}; do
     python model/run.py \
         --RUN_MODE eval \
         --SHARE_WEIGHTS \
+        --USE_MLP \
         --VAL_FOLD $VAL_FOLD \
         --LOAD_CHECKPOINT \
         --MODEL_NAME "mymodel_fold_${VAL_FOLD}" \

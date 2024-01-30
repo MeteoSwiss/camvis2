@@ -236,11 +236,11 @@ net = MultiMagnificationNet(num_levels=4, num_channels=4, size_hidden=128, align
 ```
 
 #### Best Model
-According to our experiments, the scores are higher when using the model with a linear classifier, weights sharing and no features alignment.
+According to our experiments, the scores are higher when using the model with a Multi-Layer Perceptron as a classifier, weights sharing and no features alignment.
 
 In order to declare our best model configuration, you can use the following command.
 ```python
-net = MultiMagnificationNet(num_levels=4, num_channels=4, size_hidden=128, share_weights=True, use_mlp=False, align_features=False)
+net = MultiMagnificationNet(num_levels=4, num_channels=4, size_hidden=128, share_weights=True, use_mlp=True, align_features=False)
 ```
 
 If you want to find out by yourself which of the architecture works the best, you can repeat the experiment by executing the following commands in your terminal.
@@ -249,6 +249,17 @@ bash run_scripts/train_all_architectures.sh
 bash run_scripts/eval_all_architectures.sh
 python outputs/vizualize_scores -n all_architectures -v -s
 ```
+
+Your results should be as follows (for the accuracy score)
+
+![alt text](utils/all_runs_accuracy_score.png "Accuracies for All Architectures Experiment")
+
+With the model types meaning the following : 
+Name | type_1 | type_2 | type_3 | type_4 | type_5 | type_6 | type_7 | type_8
+--- | --- | --- | --- | --- | --- | --- | --- | ---
+**MLP** | yes | yes | yes | yes | no | no | no | no
+**Weights sharing** | yes | yes | no | no | yes | yes | no | no
+**Features alignment** | yes | no | yes | no | yes | no | yes | no 
 
 ### Run Parser
 In order to execute runs using our model, we implemented an arguments parser that aims to capture all the settings one might one to experiment with. The code of the parser is in the model/run.py file and you can see what are the different arguments as well as the default values and choices when applicable by executing the following command.
