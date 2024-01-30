@@ -7,7 +7,7 @@ This section provides instruction to build the dataset and replicate the experim
 ### Overall Setup
 
 #### Enable GPU Acceleration
-If you have a NVIDIA GPU with cuda capabilities, it is strongly advised to use it for computations.
+If you have a NVIDIA GPU with CUDA capabilities, it is strongly advised to use it for computations.
 You can determine if you already have a GPU driver and its version by executing the following command.
 ```bash
 nvidia-smi
@@ -56,27 +56,28 @@ In oder to check whether all dependencies are correctly installed and imported y
 python utils/check_imports.py
 ```
 If you get no error and the message "All packages have been successfully imported" appears in your console, you should be good to go!
+
 ### Dataset Creation
 Download the webcam images and the depthmaps from this link *link to come*. 
-Uncompress the depth_maps.tar.gz file and put its contents in data/raw/depth_maps. 
-Similarly, put the content of the uncompressed images.tar.gz in data/raw/images. 
+Uncompress the depth_maps.tar.gz file and put its contents in [data/raw/depth_maps](data/raw/depth_maps).
+Similarly, put the content of the uncompressed images.tar.gz in [data/raw/images](data/raw/images). 
 You can now create the dataset files by executing the command below.
 ```bash
 python data/make_dataset.py
 ```
-In addition to the .gitkeep file, you should now have 5 .pt files and the metadata csv file in the data/processed directory
+In addition to the .gitkeep file, you should now have 5 .pt files and the metadata csv file in the [data/processed](data/processed) directory
 
 ### Model Training and Evaluation
 In this section, you will find information on how to train and evaluate a model architecture on the dataset you previously computed. You will train the model architecture using a 9-fold cross validation and visualize the validation performance on each fold using bootstrapping. In this case, we train our best performing architecture, and we call the experiment **mymodel**.
 
-The model/run.py script allows to launch experiments. It comes with a parser that allows to define, among other things :  
-+ whether we want to run the model in training or running mode
+The [model/run.py](model/run.py) script allows to launch experiments. It comes with a parser that allows to define, among other things:  
++ whether we want to run the model in training or inference mode
 + what is the model architecture going to be
 + typical hyperparameters
 + files to save logs and checkpoints of model weights
 
 #### Train the Model
-For convenience, we provide bash files with pre-written run.py commands and arguments. However, it is strongly advised to familiarize yourself with the run.py arguments parser if you want tu use this project more extensively. You can find information about how to use it in the **Run Parser** section.
+For convenience, we provide bash files with pre-written run.py commands and arguments. However, it is strongly advised to familiarize yourself with the run.py arguments parser if you want to use this project more extensively. You can find information about how to use it in the [Run Parser](#run-parser) section.
 To train the model on the training sets of each fold, execute the following script.
 ```bash
 bash run_scripts/train_model.sh
@@ -84,30 +85,30 @@ bash run_scripts/train_model.sh
 
 Training the model on 9 different folds takes close to 7 hours when using an NVIDIA A100 GPU. 
 
-You can follow the training of the model on each fold using tensorboard. To launch a tensorboard session, run the command below in another terminal.
+You can follow the training of the model on each fold using TensorBoard. To launch a TensorBoard session, run the command below in another terminal.
 ```bash
 tensorboard --logdir outputs/training_logs
 ```
 
 #### Evaluate the Model
-Once model weights are trained, you can infer on the validations sets for each fold by executing the command below.
+Once model weights are trained, you can infer on the validation sets for each fold by executing the command below.
 ```bash
 bash run_scripts/eval_model.sh
 ```
 
 #### Visualize Results
-For each fold, you can see the results of the inference on the validation set in subdirectories of outputs/, in the directories named with **mymodel** and a fold. 
-+ Confusion matrices are available in outputs/val_cf_matrices
-+ Ground-truth and prediction on webcam images are available in outputs/val_images
-+ Histplots of distance vs visibility are available in outputs/val_histplots
-+ Bootstrapped performances in terms of loss, accuracy and f1 score are available in outputs/val_scores
+For each fold, you can see the results of the inference on the validation set in subdirectories of [outputs](outputs), in the directories named with **mymodel** and a fold. 
++ Confusion matrices are available in [outputs/val_cf_matrices](outputs/val_cf_matrices)
++ Ground-truth and prediction on webcam images are available in [outputs/val_images](outputs/val_images)
++ Histplots of distance vs visibility are available in [outputs/val_histplots](outputs/val_histplots)
++ Bootstrapped performance metrics in terms of loss, accuracy and F1 score are available in [outputs/val_scores](outputs/val_scores)
 
-Once everything is finished, you can create visualizations of the results using the command below. NB the -v flag will show graphs in a pop-up window. You can remove it if you don't want it.
+Once everything is finished, you can create visualizations of the results using the command below. NB the `-v` flag will show graphs in a pop-up window. You can remove it if you don't want it.
 
 ```bash
 python outputs/visualize_scores.py -n mymodel -s -v
 ```
-This will create a subdirectory in outputs/val_scores with the same name as the scores file. Inside the directory, you can find visualizations of accuracies, f1 scores and loss values across folds for this model architecture.
+This will create a subdirectory in [outputs/val_scores](outputs/val_scores) with the same name as the scores file. Inside the directory, you can find visualizations of accuracies, F1 scores and loss values across folds for this model architecture.
 
 ### Architecture Comparison Experiment
 In this experiment, you will train two model architectures using a 9-fold cross validation and compare the results using bootstrapping on the validation performance. One of the model architecture concatenates the features of the patches at different magnification levels, while the other one appends them with scaling so that features are physically aligned from one level to another. Thus, the two architectures are called **cat** and **align** and we call this experiment **cat_vs_align**.
@@ -144,14 +145,14 @@ Here again, for each model, you can see the results of the inference on the vali
 + Confusion matrices are available in outputs/val_cf_matrices
 + Ground-truth and prediction on webcam images are available in outputs/val_images
 + Histplots of distance vs visibility are available in outputs/val_histplots
-+ Bootstrapped performances in terms of loss, accuracy and f1 score are available in outputs/val_scores
++ Bootstrapped performances in terms of loss, accuracy and F1 score are available in outputs/val_scores
 
 Once everything is finished, you can create visualizations of the results using the command below. NB the -v flag will show graphs in a pop-up window. You can remove it if you don't want it.
 
 ```bash
 python outputs/visualize_scores.py -n cat_vs_align -s -v
 ```
-This will create a subdirectory in outputs/val_scores with the same name as the scores file. Inside the directory, you can find visualizations of accuracies, f1 scores and loss values across folds and model architectures.
+This will create a subdirectory in outputs/val_scores with the same name as the scores file. Inside the directory, you can find visualizations of accuracies, F1 scores and loss values across folds and model architectures.
 
 ### Clean the Outputs Folder
 If you want to start new experiments and get rid of generated outputs, you might want to do it systematically rather than manually using bash commands. You can use commands as displayed below to do so. However, we strongly recommend carefully reading the commands and making sure that they are adapted to the directory structure. If it is not the case, you may end up losing the wrong files.
