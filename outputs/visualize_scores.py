@@ -36,7 +36,7 @@ def make_plot(df, x, y):
         >>> make_plot(df, x="group", y="acc")
     """
     # Create a colormap
-    colormap = cm.get_cmap('Set3', len(df["fold"].unique()))
+    colormap = plt.get_cmap('Set3', len(df["fold"].unique()))
 
     # Create a scatter plot
     plt.figure(figsize=(9, 5))

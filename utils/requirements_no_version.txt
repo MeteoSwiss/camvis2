@@ -7,3 +7,4 @@ torcheval
 scikit-learn
 tqdm
 tensorboard
+pyarrow
