@@ -111,9 +111,9 @@ python outputs/visualize_scores.py -n mymodel -s -v
 This will create a subdirectory in [outputs/val_scores](outputs/val_scores) with the same name as the scores file. Inside the directory, you can find visualizations of accuracies, F1 scores and loss values across folds for this model architecture.
 
 ### Architecture Comparison Experiment
-In this experiment, you will train two model architectures using a 9-fold cross validation and compare the results using bootstrapping on the validation performance. One of the model architecture concatenates the features of the patches at different magnification levels, while the other one appends them with scaling so that features are physically aligned from one level to another. Thus, the two architectures are called **cat** and **align** and we call this experiment **cat_vs_align**.
+In this experiment, you will train two model architectures using a 9-fold cross validation and compare the results using bootstrapping on the validation performance. We call this experiment **cat_vs_align** as one of the architectures (a.k.a. **cat**) concatenates the encoded inputs at all scales, while the second one (a.k.a. **align**) uses a different aggregation strategy, prioritizing physical alignment of features at different scales.
 
-Feel free to experiment with different model architectures by altering the bash files below. You can find information about the model architecture in the [Model](#model) section below.
+To gain a deeper understanding of the encoding strategies, as well as the overall architecture, it is recommended to read the information provided in the [Model](#model) section below. It is also possible to experiment with different model architectures by altering the bash files below.
 
 #### Train the Models
 To train the models on the training sets of each fold, execute the following script.
@@ -224,9 +224,9 @@ net = MultiMagnificationNet(num_levels=4, num_channels=4, size_hidden=128, share
 ```
 
 #### Features Alignment
-While concentric patches provide both high resolution close to the center pixel and greater contextual information, they have the drawback that the patch contents are not aligned across the magnification levels. For example, the content of a patch at a given magnification level in the top left corner does not correspond to that of another magnification level. With this in mind, concatenating features as in the initial architecture proposition might seem odd. 
+While concentric patches provide both high resolution close to the center pixel and greater contextual information, they have the drawback that the patch contents are not aligned across the magnification levels. For example, the content of a patch at a given magnification level in the top left corner does not correspond to that of another magnification level.
 
-To align the patch contents across magnification levels, we propose the following method. Instead of concatenating the encodings of each magnification level, we encode the first image (at full resolution), and we stack its encoding to the second level of magnification image. We then repeat the process until all the levels are encoded. The classification process remains unchanged. We use a simple convolutional encoding block at each level of encoding. Since the spatial dimension of the signal decreases by a factor of two when passed through an encoding block, we pad the output with zeros to match its original dimensions. In this way, the encodings of the previous level can be matched to the next lower magnification level, and the image contents that are visible at both levels are spatially aligned.
+To align the patch contents across magnification levels, we propose the following method. We encode the first image (at full resolution), and we stack its encoding to the second level of magnification image. We then repeat the process until all the levels are encoded. The classification process remains unchanged. We use a simple convolutional encoding block at each level of encoding. Since the spatial dimension of the signal decreases by a factor of two when passed through an encoding block, we pad the output with zeros to match its original dimensions. In this way, the encodings of the previous level can be matched to the next lower magnification level, and the image contents that are visible at both levels are spatially aligned.
 
 
 ![Feature alignment architecture](utils/model_diagram_aligned.png "Feature Alignment Diagram")
