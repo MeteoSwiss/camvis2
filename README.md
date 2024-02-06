@@ -58,7 +58,7 @@ python utils/check_imports.py
 If you get no error and the message "All packages have been successfully imported" appears in your console, you should be good to go!
 
 ### Dataset Creation
-Download the webcam images and the depthmaps from this link *link to come*. 
+Download the webcam images and the depthmaps from the [dataset repository](https://zenodo.org/records/10592111). 
 Uncompress the depth_maps.tar.gz file and put its contents in [data/raw/depth_maps](data/raw/depth_maps).
 Similarly, put the content of the uncompressed images.tar.gz in [data/raw/images](data/raw/images). 
 You can now create the dataset files by executing the command below.
